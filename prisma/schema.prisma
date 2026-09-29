@@ -1,0 +1,758 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===================== AUTH MODELS =====================
+
+model User {
+  id            String          @id @default(cuid())
+  name          String?
+  email         String          @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  profile       Profile?
+  chats         Chat[]
+  resumes       ResumeVersion[]
+  activityLogs  ActivityLog[]
+  subscriptions UserSubscription[]
+  payments      PaymentTransaction[]
+
+  @@map("users")
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ===================== PROFILE MODELS =====================
+
+model Profile {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  completionScore    Int      @default(0)
+  isPublic           Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user               User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  personalInfo       PersonalInfo?
+  educations         Education[]
+  experiences        Experience[]
+  internships        Internship[]
+  projects           Project[]
+  skills             Skill[]
+  certifications     Certification[]
+  achievements       Achievement[]
+  publications       Publication[]
+  volunteerExp       VolunteerExperience[]
+  extracurriculars   Extracurricular[]
+  resumePreferences  ResumePreferences?
+
+  @@map("profiles")
+}
+
+model PersonalInfo {
+  id               String   @id @default(cuid())
+  profileId        String   @unique
+  photoUrl         String?
+  fullName         String?
+  headline         String?
+  currentRole      String?
+  email            String?
+  phone            String?
+  location         String?
+  linkedinUrl      String?
+  githubUrl        String?
+  portfolioUrl     String?
+  websiteUrl       String?
+  nationality      String?
+  languages        String[] @default([])
+  workAuthorization String?
+  summary          String?
+  careerObjective  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("personal_info")
+}
+
+model Education {
+  id                String   @id @default(cuid())
+  profileId         String
+  institution       String
+  degree            String?
+  branch            String?
+  specialization    String?
+  cgpa              Float?
+  percentage        Float?
+  startDate         DateTime?
+  endDate           DateTime?
+  currentlyStudying Boolean  @default(false)
+  achievements      String?
+  relevantCoursework String?
+  order             Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("educations")
+}
+
+model Experience {
+  id             String         @id @default(cuid())
+  profileId      String
+  company        String
+  role           String
+  employmentType EmploymentType @default(FULL_TIME)
+  location       String?
+  startDate      DateTime?
+  endDate        DateTime?
+  isCurrent      Boolean        @default(false)
+  responsibilities String?
+  achievements   String?
+  technologies   String[]       @default([])
+  teamSize       Int?
+  hadPromotion   Boolean        @default(false)
+  impact         String?
+  managerName    String?
+  order          Int            @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("experiences")
+}
+
+model Internship {
+  id               String   @id @default(cuid())
+  profileId        String
+  company          String
+  role             String
+  location         String?
+  startDate        DateTime?
+  endDate          DateTime?
+  isCurrent        Boolean  @default(false)
+  responsibilities String?
+  achievements     String?
+  technologies     String[] @default([])
+  teamSize         Int?
+  impact           String?
+  order            Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("internships")
+}
+
+model Project {
+  id              String      @id @default(cuid())
+  profileId       String
+  name            String
+  description     String?
+  techStack       String[]    @default([])
+  githubUrl       String?
+  liveUrl         String?
+  demoUrl         String?
+  screenshotUrls  String[]    @default([])
+  startDate       DateTime?
+  endDate         DateTime?
+  projectType     ProjectType @default(PERSONAL)
+  role            String?
+  responsibilities String?
+  achievements    String?
+  problemSolved   String?
+  impact          String?
+  metrics         String?
+  teamSize        Int?
+  clientName      String?
+  aiExtracted     Json?
+  order           Int         @default(0)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  profile  Profile          @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  roleTags ProjectRoleTag[]
+
+  @@map("projects")
+}
+
+model ProjectRoleTag {
+  id        String  @id @default(cuid())
+  projectId String
+  role      String
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("project_role_tags")
+}
+
+model Skill {
+  id          String        @id @default(cuid())
+  profileId   String
+  name        String
+  category    SkillCategory @default(OTHER)
+  proficiency Proficiency   @default(INTERMEDIATE)
+  source      SkillSource   @default(MANUAL)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, name])
+  @@map("skills")
+}
+
+model Certification {
+  id             String    @id @default(cuid())
+  profileId      String
+  name           String
+  issuer         String
+  credentialId   String?
+  credentialUrl  String?
+  issueDate      DateTime?
+  expiryDate     DateTime?
+  neverExpires   Boolean   @default(false)
+  certificateUrl String?
+  order          Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("certifications")
+}
+
+model Achievement {
+  id          String          @id @default(cuid())
+  profileId   String
+  title       String
+  description String?
+  type        AchievementType @default(AWARD)
+  date        DateTime?
+  link        String?
+  order       Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("achievements")
+}
+
+model Publication {
+  id          String   @id @default(cuid())
+  profileId   String
+  title       String
+  journal     String?
+  conference  String?
+  date        DateTime?
+  authors     String?
+  doi         String?
+  url         String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("publications")
+}
+
+model VolunteerExperience {
+  id           String   @id @default(cuid())
+  profileId    String
+  organization String
+  role         String?
+  description  String?
+  startDate    DateTime?
+  endDate      DateTime?
+  isCurrent    Boolean  @default(false)
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("volunteer_experiences")
+}
+
+model Extracurricular {
+  id          String   @id @default(cuid())
+  profileId   String
+  title       String
+  category    String?
+  description String?
+  date        DateTime?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("extracurriculars")
+}
+
+model ResumePreferences {
+  id               String          @id @default(cuid())
+  profileId        String          @unique
+  preferredTemplate ResumeTemplate @default(MODERN)
+  font             String          @default("Inter")
+  accentColor      String          @default("#6366f1")
+  pageCount        Int             @default(1)
+  countryFormat    CountryFormat   @default(US)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("resume_preferences")
+}
+
+// ===================== AI / CHAT MODELS =====================
+
+model Chat {
+  id        String    @id @default(cuid())
+  userId    String
+  title     String    @default("New Chat")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@map("chats")
+}
+
+model Message {
+  id        String      @id @default(cuid())
+  chatId    String
+  role      MessageRole
+  content   String      @db.Text
+  metadata  Json?
+  createdAt DateTime    @default(now())
+
+  chat Chat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model JobDescription {
+  id             String   @id @default(cuid())
+  userId         String
+  title          String?
+  rawText        String   @db.Text
+  analyzed       Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  resumes ResumeVersion[]
+
+  @@map("job_descriptions")
+}
+
+model ResumeVersion {
+  id          String         @id @default(cuid())
+  userId      String
+  jdId        String?
+  title       String?
+  content     Json
+  template    ResumeTemplate @default(MODERN)
+  atsScore    Int?
+  isStarred   Boolean        @default(false)
+  isPublic    Boolean        @default(false)
+  version     Int            @default(1)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  user User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jd   JobDescription? @relation(fields: [jdId], references: [id])
+
+  @@map("resume_versions")
+}
+
+model AISuggestion {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String
+  content     Json
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@map("ai_suggestions")
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("activity_logs")
+}
+
+// ===================== ENUMS =====================
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  FREELANCE
+  INTERNSHIP
+}
+
+enum ProjectType {
+  PERSONAL
+  COLLEGE
+  COMPANY
+  INTERNSHIP
+  RESEARCH
+  OPEN_SOURCE
+  FREELANCE
+  HACKATHON
+  CLIENT
+}
+
+enum SkillCategory {
+  PROGRAMMING_LANGUAGE
+  FRAMEWORK
+  LIBRARY
+  DATABASE
+  CLOUD
+  DEVOPS
+  AI_ML
+  DATA_ANALYTICS
+  VISUALIZATION
+  SOFT_SKILL
+  BUSINESS
+  TOOL
+  PLATFORM
+  OTHER
+}
+
+enum Proficiency {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum SkillSource {
+  PROJECT
+  EXPERIENCE
+  INTERNSHIP
+  CERTIFICATION
+  EDUCATION
+  MANUAL
+}
+
+enum AchievementType {
+  AWARD
+  HACKATHON
+  SCHOLARSHIP
+  PATENT
+  RESEARCH
+  COMPETITION
+  OTHER
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum ResumeTemplate {
+  MODERN
+  PROFESSIONAL
+  MINIMAL
+  ATS
+  EXECUTIVE
+  CREATIVE
+  ACADEMIC
+}
+
+enum CountryFormat {
+  US
+  INDIA
+  EUROPE
+  CANADA
+}
+
+// ===================== ADMIN & MANAGEMENT MODELS =====================
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  SUPPORT
+  EDITOR
+}
+
+model AdminUser {
+  id           String      @id @default(cuid())
+  name         String
+  email        String      @unique
+  password     String
+  role         AdminRole   @default(ADMIN)
+  avatarUrl    String?
+  isActive     Boolean     @default(true)
+  permissions  Json?       // Optional custom granular permissions
+  lastLoginAt  DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  auditLogs    AdminAuditLog[]
+
+  @@map("admin_users")
+}
+
+model LandingPageConfig {
+  id          String   @id @default(cuid())
+  sectionKey  String   @unique // e.g. "hero", "features", "testimonials", "faqs", "pricing", "banner", "footer"
+  title       String?
+  subtitle    String?
+  badge       String?
+  content     Json     // Dynamic section data
+  isActive    Boolean  @default(true)
+  order       Int      @default(0)
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("landing_page_configs")
+}
+
+model PlanPackage {
+  id                 String               @id @default(cuid())
+  name               String               @unique // e.g. "Free Tier", "Starter Pro", "Executive AI"
+  slug               String               @unique // e.g. "free", "starter", "pro", "enterprise"
+  description        String?
+  priceMonthly       Float                @default(0.0)
+  priceYearly        Float                @default(0.0)
+  currency           String               @default("USD")
+  badge              String?              // e.g. "Most Popular", "Best Value"
+  isPopular          Boolean              @default(false)
+  isActive           Boolean              @default(true)
+  isDefault          Boolean              @default(false)
+  maxResumes         Int                  @default(1) // Limit on resumes (-1 for unlimited)
+  maxAiGenerations   Int                  @default(10) // Limit on AI generation runs per month (-1 for unlimited)
+  maxPdfDownloads    Int                  @default(3) // Limit on downloads (-1 for unlimited)
+  customFeatures     Json                 // JSON array of feature flags & labels e.g. [{ key: "ats_score", label: "ATS Score Analyzer", included: true }]
+  sortOrder          Int                  @default(0)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  templateLocks      ResumeTemplateLock[]
+  subscriptions      UserSubscription[]
+  payments           PaymentTransaction[]
+
+  @@map("plan_packages")
+}
+
+model ResumeTemplateLock {
+  id                 String          @id @default(cuid())
+  template           ResumeTemplate  @unique
+  isLocked           Boolean         @default(false)
+  requiredPlanSlug   String          @default("free") // "free", "pro", "enterprise", etc.
+  planPackageId      String?
+  lockReason         String?         @default("Upgrade your plan to unlock this executive resume template")
+  previewImage       String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  planPackage        PlanPackage?    @relation(fields: [planPackageId], references: [id], onDelete: SetNull)
+
+  @@map("resume_template_locks")
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum PaymentGateway {
+  STRIPE
+  RAZORPAY
+  PAYPAL
+  MANUAL
+}
+
+model PaymentTransaction {
+  id              String         @id @default(cuid())
+  transactionId   String         @unique @default(cuid())
+  userId          String
+  planPackageId   String?
+  amount          Float
+  currency        String         @default("USD")
+  status          PaymentStatus  @default(COMPLETED)
+  gateway         PaymentGateway @default(MANUAL)
+  billingCycle    String         @default("monthly") // "monthly" | "yearly" | "one_time"
+  invoiceUrl      String?
+  paymentMethod   String?        @default("card")
+  customerEmail   String?
+  customerName    String?
+  metadata        Json?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planPackage     PlanPackage?   @relation(fields: [planPackageId], references: [id], onDelete: SetNull)
+
+  @@map("payment_transactions")
+}
+
+model UserSubscription {
+  id                      String       @id @default(cuid())
+  userId                  String       @unique
+  planPackageId           String
+  status                  String       @default("active") // "active", "cancelled", "expired", "past_due"
+  billingCycle            String       @default("monthly")
+  currentPeriodStart      DateTime     @default(now())
+  currentPeriodEnd        DateTime?
+  cancelAtPeriodEnd       Boolean      @default(false)
+  customMaxResumes        Int?         // Admin override for specific user
+  customMaxAiGenerations  Int?         // Admin override for specific user
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
+
+  user                    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planPackage             PlanPackage  @relation(fields: [planPackageId], references: [id], onDelete: Restrict)
+
+  @@map("user_subscriptions")
+}
+
+model College {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  code        String?
+  state       String?
+  city        String?
+  country     String   @default("India")
+  tier        String?  @default("Tier 1") // "Tier 1", "Tier 2", "Tier 3", "Ivy League", etc.
+  website     String?
+  logoUrl     String?
+  isVerified  Boolean  @default(true)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("colleges")
+}
+
+enum DegreeType {
+  BACHELORS
+  MASTERS
+  DOCTORATE
+  DIPLOMA
+  CERTIFICATE
+}
+
+model Degree {
+  id            String         @id @default(cuid())
+  name          String         @unique // e.g. "Bachelor of Technology (B.Tech)"
+  code          String         @unique // e.g. "B.Tech"
+  type          DegreeType     @default(BACHELORS)
+  durationYears Float          @default(4.0)
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  branches      DegreeBranch[]
+
+  @@map("degrees")
+}
+
+model DegreeBranch {
+  id          String   @id @default(cuid())
+  degreeId    String
+  name        String   // e.g. "Computer Science & Engineering", "Artificial Intelligence & Data Science"
+  code        String?  // e.g. "CSE", "AI-DS"
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  degree      Degree   @relation(fields: [degreeId], references: [id], onDelete: Cascade)
+
+  @@unique([degreeId, name])
+  @@map("degree_branches")
+}
+
+model AdminAuditLog {
+  id          String     @id @default(cuid())
+  adminId     String?
+  adminEmail  String
+  action      String     // e.g. "UPDATE_PLAN", "LOCK_TEMPLATE", "BAN_USER", "UPDATE_CMS"
+  entity      String     // e.g. "PlanPackage", "LandingPageConfig", "User"
+  entityId    String?
+  details     Json?
+  ipAddress   String?
+  createdAt   DateTime   @default(now())
+
+  admin       AdminUser? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@map("admin_audit_logs")
+}
+
