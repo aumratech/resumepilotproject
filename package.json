@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev -H 0.0.0.0",
     "dev:admin": "npm --prefix admin run dev",
-    "build": "next build",
+    "postinstall": "prisma generate",
+    "build": "prisma generate && next build",
     "build:admin": "npm --prefix admin run build",
     "start": "next start",
     "start:admin": "npm --prefix admin run start",

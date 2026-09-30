@@ -147,22 +147,30 @@ Workflow:
             .maybeSingle()
 
           if (chat) {
-            await supabaseAdmin.from('messages').insert({
-              id: crypto.randomUUID(),
-              chatId,
-              role: 'ASSISTANT',
-              content: fullContent,
-            }).then(() => {}).catch(console.error)
+            try {
+              await supabaseAdmin.from('messages').insert({
+                id: crypto.randomUUID(),
+                chatId,
+                role: 'ASSISTANT',
+                content: fullContent,
+              })
+            } catch (err) {
+              console.error('Failed to insert message:', err)
+            }
           }
 
           // Record AI generation usage
-          await supabaseAdmin.from('activity_logs').insert({
-            id: crypto.randomUUID(),
-            userId: session.user.id,
-            type: 'AI_CHAT_GENERATION',
-            metadata: { chatId },
-            createdAt: new Date().toISOString(),
-          }).then(() => {}).catch(console.error)
+          try {
+            await supabaseAdmin.from('activity_logs').insert({
+              id: crypto.randomUUID(),
+              userId: session.user.id,
+              type: 'AI_CHAT_GENERATION',
+              metadata: { chatId },
+              createdAt: new Date().toISOString(),
+            })
+          } catch (err) {
+            console.error('Failed to log activity:', err)
+          }
         }
 
         controller.enqueue(encoder.encode('data: [DONE]\n\n'))
